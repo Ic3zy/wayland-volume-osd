@@ -1,0 +1,20 @@
+# Build artifacts
+*.o
+src/*.o
+libosd.so
+libosd.a
+demo
+test_phase1
+
+# Generated wayland-scanner protocol headers and sources
+src/xdg-shell-client-protocol.h
+src/xdg-shell-protocol.c
+src/wlr-layer-shell-unstable-v1-client-protocol.h
+src/wlr-layer-shell-unstable-v1-protocol.c
+
+# Temporary and editor files
+*~
+*.swp
+*.tmp
+.DS_Store
+build/
