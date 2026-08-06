@@ -234,6 +234,19 @@ struct wl_buffer *osd_render_frame(osd_render_ctx_t *render,
     cairo_paint(cr);
     cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
 
+    if (alpha <= 0.001) {
+        /* Fully transparent frame to flush compositor shadow cache */
+        cairo_destroy(cr);
+        cairo_surface_destroy(cairo_surf);
+
+        if (wl_proxy_get_version((struct wl_proxy *)surface) >= 3) {
+            wl_surface_set_buffer_scale(surface, scale);
+        }
+        wl_surface_attach(surface, buf->wl_buf, 0, 0);
+        wl_surface_damage_buffer(surface, 0, 0, pixel_w, pixel_h);
+        return buf->wl_buf;
+    }
+
     /* High DPI scaling */
     cairo_scale(cr, scale, scale);
 
@@ -286,18 +299,26 @@ struct wl_buffer *osd_render_frame(osd_render_ctx_t *render,
     cairo_stroke(cr);
 
     /* 4. Circular Progress Arc Fill */
-    int clamped_vol = volume < 0 ? 0 : (volume > 100 ? 100 : volume);
+    int max_vol = config->max_volume > 0 ? config->max_volume : 100;
+    int clamped_vol = volume < 0 ? 0 : (volume > max_vol ? max_vol : volume);
+
     if (!muted && clamped_vol > 0) {
-        double fill_sweep = total_sweep * (clamped_vol / 100.0);
+        double fill_sweep = total_sweep * ((double)clamped_vol / (double)max_vol);
         double fill_end_angle = start_angle + fill_sweep;
 
         cairo_arc(cr, cx, cy, arc_radius, start_angle, fill_end_angle);
 
-        /* Electric Blue Vibrant Gradient */
         cairo_pattern_t *arc_pat = cairo_pattern_create_linear(cx - arc_radius, cy, cx + arc_radius, cy);
-        osd_color_t fg = config->fg_color.a > 0 ? config->fg_color : (osd_color_t){0.20, 0.55, 0.98, 1.0};
-        cairo_pattern_add_color_stop_rgba(arc_pat, 0.0, fg.r, fg.g, fg.b, fg.a * alpha);
-        cairo_pattern_add_color_stop_rgba(arc_pat, 1.0, fg.r * 0.7, fg.g * 1.1 > 1.0 ? 1.0 : fg.g * 1.1, 1.0, fg.a * alpha);
+        if (volume > 100) {
+            /* Overamplification (>100%): Warm Amber to Crimson gradient */
+            cairo_pattern_add_color_stop_rgba(arc_pat, 0.0, 0.96, 0.62, 0.15, alpha);
+            cairo_pattern_add_color_stop_rgba(arc_pat, 1.0, 0.95, 0.28, 0.28, alpha);
+        } else {
+            /* Normal scale (<=100%): Electric Blue gradient */
+            osd_color_t fg = config->fg_color.a > 0 ? config->fg_color : (osd_color_t){0.20, 0.55, 0.98, 1.0};
+            cairo_pattern_add_color_stop_rgba(arc_pat, 0.0, fg.r, fg.g, fg.b, fg.a * alpha);
+            cairo_pattern_add_color_stop_rgba(arc_pat, 1.0, fg.r * 0.7, fg.g * 1.1 > 1.0 ? 1.0 : fg.g * 1.1, 1.0, fg.a * alpha);
+        }
 
         cairo_set_source(cr, arc_pat);
         cairo_stroke(cr);
@@ -312,16 +333,20 @@ struct wl_buffer *osd_render_frame(osd_render_ctx_t *render,
 
     /* 5. Refined Centered Percentage Text ("75%") */
     cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-    cairo_set_font_size(cr, outer_radius * 0.34); /* Elegant balanced font size */
+    cairo_set_font_size(cr, outer_radius * 0.34);
 
     osd_color_t icon_col = config->icon_color.a > 0 ? config->icon_color : (osd_color_t){0.96, 0.97, 0.98, 1.0};
+    if (volume > 100 && !muted) {
+        /* Overamplification warm highlight text color */
+        icon_col = (osd_color_t){1.0, 0.82, 0.40, 1.0};
+    }
     cairo_set_source_rgba(cr, icon_col.r, icon_col.g, icon_col.b, icon_col.a * alpha);
 
     char label_buf[32];
     if (muted) {
         snprintf(label_buf, sizeof(label_buf), "Muted");
     } else {
-        snprintf(label_buf, sizeof(label_buf), "%d%%", clamped_vol);
+        snprintf(label_buf, sizeof(label_buf), "%d%%", volume);
     }
 
     cairo_text_extents_t extents;

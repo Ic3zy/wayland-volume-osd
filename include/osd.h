@@ -49,6 +49,7 @@ typedef struct osd_config {
     osd_position_t position;    /**< Screen position (default: OSD_POS_BOTTOM_CENTER) */
     int margin_x;               /**< Horizontal margin offset (default: 0) */
     int margin_y;               /**< Vertical margin offset (default: 90) */
+    int max_volume;             /**< Maximum volume percentage scale (default: 100, configurable to 150+) */
     
     osd_color_t bg_color;       /**< Card background color */
     osd_color_t fg_color;       /**< Volume level fill color */

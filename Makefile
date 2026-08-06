@@ -1,9 +1,9 @@
 CC ?= gcc
-CFLAGS ?= -std=c17 -Wall -Wextra -pedantic -Werror=implicit-function-declaration -fPIC -g
+CFLAGS ?= -std=c17 -Wall -Wextra -pedantic -Werror=implicit-function-declaration -fPIC -g -pthread
 INCLUDES = -Iinclude -Isrc
 
 WAYLAND_CFLAGS := $(shell pkg-config --cflags wayland-client cairo 2>/dev/null)
-WAYLAND_LIBS := $(shell pkg-config --libs wayland-client cairo 2>/dev/null || echo "-lwayland-client -lcairo -lm")
+WAYLAND_LIBS := $(shell pkg-config --libs wayland-client cairo 2>/dev/null || echo "-lwayland-client -lcairo -lm") -pthread
 
 WAYLAND_SCANNER := $(shell pkg-config --variable=wayland_scanner wayland-scanner 2>/dev/null || echo "wayland-scanner")
 

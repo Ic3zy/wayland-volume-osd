@@ -49,6 +49,13 @@ static void xdg_backend_update_geometry(osd_backend_t *backend, int width, int h
     }
 }
 
+static bool xdg_backend_is_configured(osd_backend_t *backend)
+{
+    if (!backend || !backend->priv) return false;
+    xdg_backend_priv_t *priv = (xdg_backend_priv_t *)backend->priv;
+    return priv->configured;
+}
+
 static void xdg_backend_destroy(osd_backend_t *backend)
 {
     if (!backend || !backend->priv) return;
@@ -69,6 +76,7 @@ static void xdg_backend_destroy(osd_backend_t *backend)
 static const struct osd_backend_ops xdg_backend_ops = {
     .init = osd_xdg_backend_init,
     .update_geometry = xdg_backend_update_geometry,
+    .is_configured = xdg_backend_is_configured,
     .destroy = xdg_backend_destroy,
 };
 
@@ -81,6 +89,8 @@ bool osd_xdg_backend_init(osd_backend_t *backend, struct osd_wayland_ctx *wl_ctx
 
     xdg_backend_priv_t *priv = calloc(1, sizeof(xdg_backend_priv_t));
     if (!priv) return false;
+
+    priv->configured = false;
 
     priv->xdg_surface = xdg_wm_base_get_xdg_surface(wl_ctx->wm_base, surface);
     if (!priv->xdg_surface) {
@@ -99,20 +109,16 @@ bool osd_xdg_backend_init(osd_backend_t *backend, struct osd_wayland_ctx *wl_ctx
     }
     xdg_toplevel_add_listener(priv->xdg_toplevel, &xdg_toplevel_listener, priv);
 
-    /* Set borderless / title properties */
     xdg_toplevel_set_title(priv->xdg_toplevel, "OSD");
     xdg_toplevel_set_app_id(priv->xdg_toplevel, "sound_osd");
 
-    /* Apply initial geometry constraints */
     xdg_toplevel_set_min_size(priv->xdg_toplevel, config->width, config->height);
     xdg_toplevel_set_max_size(priv->xdg_toplevel, config->width, config->height);
 
     backend->ops = &xdg_backend_ops;
     backend->priv = priv;
 
-    /* Initial commit and roundtrip */
     wl_surface_commit(surface);
-    wl_display_roundtrip(wl_ctx->display);
 
     return true;
 }

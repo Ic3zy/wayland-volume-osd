@@ -74,11 +74,17 @@ static void layer_shell_update_geometry(osd_backend_t *backend, int width, int h
     if (anchor & ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT) left_margin = margin_x;
     if (anchor & ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT) right_margin = margin_x;
     if (anchor == 0) {
-        /* Centered: margin_y applies if specified */
         bottom_margin = margin_y;
     }
 
     zwlr_layer_surface_v1_set_margin(priv->layer_surface, top_margin, right_margin, bottom_margin, left_margin);
+}
+
+static bool layer_shell_is_configured(osd_backend_t *backend)
+{
+    if (!backend || !backend->priv) return false;
+    layer_shell_priv_t *priv = (layer_shell_priv_t *)backend->priv;
+    return priv->configured;
 }
 
 static void layer_shell_destroy(osd_backend_t *backend)
@@ -97,6 +103,7 @@ static void layer_shell_destroy(osd_backend_t *backend)
 static const struct osd_backend_ops layer_shell_ops = {
     .init = osd_layer_shell_init,
     .update_geometry = layer_shell_update_geometry,
+    .is_configured = layer_shell_is_configured,
     .destroy = layer_shell_destroy,
 };
 
@@ -112,8 +119,8 @@ bool osd_layer_shell_init(osd_backend_t *backend, struct osd_wayland_ctx *wl_ctx
 
     priv->current_width = config->width;
     priv->current_height = config->height;
+    priv->configured = false;
 
-    /* Preferred overlay layer */
     priv->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
         wl_ctx->layer_shell,
         surface,
@@ -130,21 +137,14 @@ bool osd_layer_shell_init(osd_backend_t *backend, struct osd_wayland_ctx *wl_ctx
 
     zwlr_layer_surface_v1_add_listener(priv->layer_surface, &layer_surface_listener, priv);
 
-    /* Requirements: No keyboard focus, no exclusive zone */
     zwlr_layer_surface_v1_set_keyboard_interactivity(priv->layer_surface, ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE);
     zwlr_layer_surface_v1_set_exclusive_zone(priv->layer_surface, 0);
 
     backend->ops = &layer_shell_ops;
     backend->priv = priv;
 
-    /* Initial geometry */
     layer_shell_update_geometry(backend, config->width, config->height, config->position, config->margin_x, config->margin_y);
-
-    /* Commit initial surface state to prompt compositor to send configure event */
     wl_surface_commit(surface);
-
-    /* Roundtrip to receive and ACK initial configure event */
-    wl_display_roundtrip(wl_ctx->display);
 
     return true;
 }

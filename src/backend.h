@@ -16,6 +16,7 @@ typedef struct osd_backend osd_backend_t;
 struct osd_backend_ops {
     bool (*init)(osd_backend_t *backend, struct osd_wayland_ctx *wl_ctx, struct wl_surface *surface, const osd_config_t *config);
     void (*update_geometry)(osd_backend_t *backend, int width, int height, osd_position_t pos, int margin_x, int margin_y);
+    bool (*is_configured)(osd_backend_t *backend);
     void (*destroy)(osd_backend_t *backend);
 };
 

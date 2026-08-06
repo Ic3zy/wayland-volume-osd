@@ -212,6 +212,17 @@ void osd_wayland_finish(struct osd_wayland_ctx *ctx)
     }
 }
 
+void osd_wayland_set_input_passthrough(struct osd_wayland_ctx *ctx, struct wl_surface *surface)
+{
+    if (!ctx || !ctx->compositor || !surface) return;
+
+    struct wl_region *empty_region = wl_compositor_create_region(ctx->compositor);
+    if (empty_region) {
+        wl_surface_set_input_region(surface, empty_region);
+        wl_region_destroy(empty_region);
+    }
+}
+
 static int set_cloexec_or_close(int fd)
 {
     if (fd == -1) return -1;

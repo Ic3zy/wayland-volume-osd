@@ -45,6 +45,11 @@ bool osd_wayland_init(struct osd_wayland_ctx *ctx);
 void osd_wayland_finish(struct osd_wayland_ctx *ctx);
 
 /**
+ * @brief Sets the Wayland surface input region to empty, enabling 100% click-through pass-through of all mouse events.
+ */
+void osd_wayland_set_input_passthrough(struct osd_wayland_ctx *ctx, struct wl_surface *surface);
+
+/**
  * @brief Portable creation of an anonymous shared memory file descriptor (POSIX / Linux memfd_create / mkstemp).
  */
 int osd_shm_create_anonymous_file(off_t size);
