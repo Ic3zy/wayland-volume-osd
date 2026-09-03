@@ -31,7 +31,7 @@ src/wlr-layer-shell-unstable-v1-protocol.c: protocols/wlr-layer-shell-unstable-v
 	$(CC) $(CFLAGS) $(INCLUDES) $(WAYLAND_CFLAGS) -c $< -o $@
 
 libosd.so: $(LIB_OBJS)
-	$(CC) -shared $(LIB_OBJS) -o $@ $(WAYLAND_LIBS)
+	$(CC) -shared -fPIC $(LIB_OBJS) -o $@ $(WAYLAND_LIBS)
 
 libosd.a: $(LIB_OBJS)
 	ar rcs $@ $(LIB_OBJS)
